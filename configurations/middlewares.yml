@@ -1,0 +1,45 @@
+http:
+  middlewares:
+    middleware-https-redirect:
+      redirectScheme:
+        scheme: https
+
+    middleware-default-headers:
+      headers:
+        customFrameOptionsValue: SAMEORIGIN
+        browserXssFilter: true
+        stsSeconds: 155520011
+        referrerPolicy: no-referrer
+        contentTypeNosniff: true
+        sslRedirect: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        featurePolicy: true
+        sslForceHost: true
+        contentSecurityPolicy: "default-src ‘self’; script-src ‘self’ ‘unsafe-eval’; style-src ‘self’ ‘unsafe-inline’; frame-src *; img-src * data: blob:; font-src ‘self’ data:; media-src *;"
+        accessControlAllowOriginList: [“<origin>”]
+        featurePolicy: "geolocation 'none'; camera 'none'; microphone 'none'"   
+
+    middleware-basic-auth:
+      basicAuth:
+        users:
+          - "<htpasswd_user>:<htpasswd_passwd>"
+
+    middleware-redirectregex-nextcloud:
+      redirectRegex:
+        regex: "/.well-known/(card|cal)dav"
+        replacement: "/remote.php/dav/"
+      
+    middleware-ratelimit:
+      rateLimit:
+        average: 50
+        burst: 100
+        period: 1m
+
+    middleware-whitelist:
+      ipWhiteList:
+        sourceRange:
+        - "10.0.0.0/24"
+        - "192.168.0.0/16"
+        - "172.0.0.0/8"

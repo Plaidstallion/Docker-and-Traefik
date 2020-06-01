@@ -1,0 +1,25 @@
+http:
+  routers:
+    router-pihole-secure:
+      entryPoints: 
+        - "websecure"
+      rule: "Host(`pihole.<domain>`)"
+      service: "service-pihole"
+      middlewares: 
+        - "middleware-pihole-add-admin"
+        - "chain-default"
+        - "middleware-basic-auth"
+
+  services:
+    service-pihole:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.11:80"
+        passHostHeader: true
+  
+  middlewares:
+    middleware-pihole-add-admin:
+      addPrefix:
+        prefix: "/admin"
+      
+        
