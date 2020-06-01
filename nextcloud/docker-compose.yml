@@ -1,0 +1,50 @@
+version: '3.3'
+
+services:
+  db:
+    restart: unless-stopped
+    image: linuxserver/mariadb:latest
+    container_name: nextcloud_db
+    networks:
+      - ncdb
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - MYSQL_USER=nextcloud
+    - MYSQL_PASSWORD=$NCMYSQL_PASS
+    - MYSQL_DATABASE=nextcloud
+    - MYSQL_ROOT_PASSWORD=$NCMYSQL_ROOT_PASS
+    volumes:
+      - $USERDIR/docker/nextcloud/mariadb:/config
+      
+  nextcloud:
+    image: linuxserver/nextcloud:latest
+    container_name: nextcloud
+    restart: unless-stopped
+    networks:
+      - proxy
+      - ncdb
+    depends_on:
+      - db
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+    volumes:
+      - $USERDIR/docker/nextcloud/nginx/site-confs/default:/config/nginx/site-confs/default
+      - $USERDIR/docker/nextcloud/www/nextcloud/config/config.php:/config/www/nextcloud/config/config.php
+      - $USERDIR/docker/nextcloud/www/nextcloud/apps:/config/www/nextcloud/apps
+      - $USERDIR/docker/nextcloud/www/nextcloud/3rdparty:/config/www/nextcloud/3rdparty
+      - $POOL/nextcloud:/data
+    labels:
+      - "traefik.enable=true"
+      - traefik.http.routers.nextcloud-secure.entrypoints=websecure
+      - traefik.http.routers.nextcloud-secure.rule=Host(`nextcloud.$DOMAINNAME`)
+      - traefik.http.routers.nextcloud-secure.middlewares=chain-nextcloud@file
+
+networks:
+  proxy:
+      external: true
+        
+  ncdb:
+      internal: true
