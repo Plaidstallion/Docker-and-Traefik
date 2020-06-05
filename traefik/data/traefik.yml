@@ -26,6 +26,7 @@ providers:
     exposedByDefault: false
     swarmMode: false
     network: proxy
+    defaultRule: "Host(`{{ index .Labels \"com.docker.compose.service\"}}.<domain>.com`)"
 
   file:
     directory: /configurations/
