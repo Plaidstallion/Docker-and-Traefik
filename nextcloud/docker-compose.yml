@@ -31,15 +31,11 @@ services:
       - PGID=$PGID
       - TZ=$TZ
     volumes:
-      - $USERDIR/docker/nextcloud/nginx/site-confs/default:/config/nginx/site-confs/default
-      - $USERDIR/docker/nextcloud/www/nextcloud/config/config.php:/config/www/nextcloud/config/config.php
-      - $USERDIR/docker/nextcloud/www/nextcloud/apps:/config/www/nextcloud/apps
-      - $USERDIR/docker/nextcloud/www/nextcloud/3rdparty:/config/www/nextcloud/3rdparty
+      - $USERDIR/docker/nextcloud:/config
       - $POOL/nextcloud:/data
     labels:
       - "traefik.enable=true"
       - traefik.http.routers.nextcloud-secure.entrypoints=websecure
-      - traefik.http.routers.nextcloud-secure.rule=Host(`nextcloud.$DOMAINNAME`)
       - traefik.http.routers.nextcloud-secure.middlewares=chain-nextcloud@file
 
 networks:
