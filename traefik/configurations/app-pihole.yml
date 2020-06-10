@@ -8,7 +8,7 @@ http:
       middlewares: 
         - "middleware-pihole-add-admin"
         - "chain-default"
-        - "middleware-basic-auth"
+        - "middleware-oauth"
 
   services:
     service-pihole:
