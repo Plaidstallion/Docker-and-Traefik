@@ -8,7 +8,7 @@ http:
       headers:
         customFrameOptionsValue: SAMEORIGIN
         browserXssFilter: true
-        stsSeconds: 155520011
+        stsSeconds: 155520011 #31536000
         referrerPolicy: no-referrer
         contentTypeNosniff: true
         sslRedirect: true
