@@ -53,7 +53,7 @@ certificatesResolvers:
 
 log:
   filePath: "/log/traefik.log" # (Default: error) DEBUG, INFO, WARN, ERROR, FATAL, PANIC
-  level: INFO
+  level: ERROR
 
 accessLog:
   filePath: /log/access.log
