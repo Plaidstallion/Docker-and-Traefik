@@ -33,9 +33,9 @@ http:
       
     middleware-ratelimit:
       rateLimit:
-        average: 50
-        burst: 100
-        period: 1m
+        average: 200
+        burst: 400
+        period: 10s
 
     middleware-whitelist:
       ipWhiteList:
@@ -43,3 +43,14 @@ http:
         - "10.0.0.0/24"
         - "192.168.0.0/16"
         - "172.0.0.0/8"
+        
+    middleware-guacamole-add-guacamole-ext:
+      addPrefix:
+        prefix: "/guacamole"
+
+    middleware-oauth:
+      forwardAuth:
+        address: "http://oauth:4181"
+        trustForwardHeader: true
+        authResponseHeaders: 
+          - "X-Forwarded-User"
