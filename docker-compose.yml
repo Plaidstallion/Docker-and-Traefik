@@ -5,6 +5,7 @@
 version: '3'
 
 #need to perform a 'docker network create proxy' & 'docker network create mainstack'
+
 networks: 
 
   mainstack:
@@ -20,6 +21,7 @@ networks:
 services:
 
 ######The Front End######
+
   traefik:
     image: traefik:chevrotin
     container_name: traefik
