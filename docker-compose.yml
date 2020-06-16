@@ -142,9 +142,6 @@ services:
     labels: 
       - traefik.enable=true
       - traefik.http.routers.librespeed.entrypoints=websecure
-#      - traefik.http.routers.librespeed.rule=(Host(`$DOMAINNAME`) && Path(`/librespeed`))
-#      - traefik.http.routers.librespeed.rule=(Host(`librespeed.$DOMAINNAME`)) || (Host(`$DOMAINNAME`) && Path(`/librespeed`))
-#      - traefik.http.routers.librespeed.middlewares=chain-oauth@file
       - traefik.http.routers.librespeed.middlewares=chain-authelia@file
     ports:
       - 8085:80
