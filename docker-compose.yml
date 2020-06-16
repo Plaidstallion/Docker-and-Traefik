@@ -48,6 +48,28 @@ services:
     labels:
       - "traefik.http.routers.traefik-secure.service=api@internal"
 
+  authelia:
+    container_name: authelia
+    image: authelia/authelia:latest
+    restart: always
+    networks:
+      - proxy
+    expose:
+      - 9091
+    volumes:
+      - $USERDIR/docker/authelia/authelia:/var/lib/authelia
+      - $USERDIR/docker/authelia/configuration.yml:/etc/authelia/configuration.yml:ro
+      - $USERDIR/docker/authelia/users_database.yml:/etc/authelia/users_database.yml
+      - $USERDIR/docker/authelia/notification.txt:/tmp/authelia/notification.txt
+    environment:
+      - TZ=$TZ
+      - UID=$PUID
+      - GID=$PGID
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.entrypoints=websecure"
+      - "traefik.http.routers.authelia.middlewares=chain-authelia@file"
+
   oauth:
     container_name: oauth
     image: thomseddon/traefik-forward-auth:latest
