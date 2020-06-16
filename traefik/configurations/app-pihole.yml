@@ -6,9 +6,8 @@ http:
       rule: "Host(`pihole.<domain>`)"
       service: "service-pihole"
       middlewares: 
+        - "chain-authelia" 
         - "middleware-pihole-add-admin"
-        - "chain-default"
-        - "middleware-oauth"
 
   services:
     service-pihole:
