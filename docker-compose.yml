@@ -5,7 +5,6 @@
 version: '3'
 
 #need to perform a 'docker network create proxy' & 'docker network create mainstack'
-
 networks: 
 
   mainstack:
@@ -143,7 +142,10 @@ services:
     labels: 
       - traefik.enable=true
       - traefik.http.routers.librespeed.entrypoints=websecure
-      - traefik.http.routers.librespeed.middlewares=chain-oauth@file
+#      - traefik.http.routers.librespeed.rule=(Host(`$DOMAINNAME`) && Path(`/librespeed`))
+#      - traefik.http.routers.librespeed.rule=(Host(`librespeed.$DOMAINNAME`)) || (Host(`$DOMAINNAME`) && Path(`/librespeed`))
+#      - traefik.http.routers.librespeed.middlewares=chain-oauth@file
+      - traefik.http.routers.librespeed.middlewares=chain-authelia@file
     ports:
       - 8085:80
     restart: unless-stopped
@@ -182,33 +184,11 @@ services:
       - 8200:8200
     restart: unless-stopped
 
-######Dashboards######
-
-heimdall:
-  image: linuxserver/heimdall:latest
-  container_name: heimdall
-  security_opt:
-    - no-new-privileges:true
-  networks: 
-    - mainstack
-  ports:
-    - 8443:443
-    - 8080:80
-  volumes: 
-    - $USERDIR/docker/heimdall:/config
-  environment:
-    - PUID=$PUID
-    - PGID=$PGID
-    - TZ=$TZ
-  restart: unless-stopped
-
-######Gameservers#####
+######Game/App servers#####
 
   minecraftbe:
     image: toasterlint/minecraft_bedrock:latest
     container_name: minecraftbe
-    security_opt:
-      - no-new-privileges:true
     volumes:
       - "$USERDIR/docker/minecraftbe:/bedrock-server/config"
       - "$USERDIR/docker/minecraftbe/worlds:/bedrock-server/worlds"
@@ -224,7 +204,44 @@ heimdall:
     network_mode: host
     restart: unless-stopped
 
-######The Media Server Stack######
+  thelounge:
+    image: linuxserver/thelounge:latest
+    container_name: thelounge
+    security_opt:
+      - no-new-privileges:true
+    networks: 
+      - mainstack
+    environment:
+      - PUID=$PGID
+      - PGID=$PUID
+      - TZ=$TZ
+    volumes:
+      - $USERDIR/docker/thelounge:/config
+    ports:
+      - 9001:9000
+    restart: unless-stopped
+
+######Dashboards######
+
+  heimdall:
+    image: linuxserver/heimdall:latest
+    container_name: heimdall
+    security_opt:
+      - no-new-privileges:true
+    networks: 
+      - mainstack
+    ports:
+      - 8443:443
+      - 8080:80
+    volumes: 
+      - $USERDIR/docker/heimdall:/config
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+    restart: unless-stopped
+
+######Media Server & "PVR" Stack######
 
   emby:
     image: emby/embyserver:latest
@@ -233,6 +250,8 @@ heimdall:
       - no-new-privileges:true
     networks:
       - proxy
+#    expose: 
+#      - 8096
     ports:
       - 8096:8096
     volumes:
@@ -400,8 +419,6 @@ heimdall:
     restart: unless-stopped
     image: linuxserver/mariadb:latest
     container_name: nextcloud_db
-    security_opt:
-      - no-new-privileges:true
     networks:
       - ncdb
     environment:
@@ -418,8 +435,6 @@ heimdall:
     image: linuxserver/nextcloud:latest
     container_name: nextcloud
     restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
     networks:
       - proxy
       - ncdb
@@ -438,13 +453,10 @@ heimdall:
       - traefik.http.routers.nextcloud.middlewares=chain-nextcloud@file
 
 ######Guacamole######
-
   guacdb:
     restart: unless-stopped
     image: linuxserver/mariadb:latest
     container_name: guacdb
-    security_opt:
-      - no-new-privileges:true
     networks:
       - guacnetwork
     environment:
@@ -461,12 +473,11 @@ heimdall:
   guacd:
     image: linuxserver/guacd:latest
     container_name: guacd
-    security_opt:
-      - no-new-privileges:true
-    ports:
-      - 4822:4822
+#    ports:
+#      - 4822:4822
     networks:
       - guacnetwork
+      - mainstack
     environment:
       - PUID=$PUID
       - PGID=$PGID
@@ -475,8 +486,6 @@ heimdall:
 
   guacamole:
     container_name: guacamole
-    security_opt:
-      - no-new-privileges:true
     depends_on:
     - guacd
     - guacdb
@@ -494,9 +503,9 @@ heimdall:
       - guacnetwork
       - proxy
     ports:
-    - 8087:8080
+      - 8087:8080
     labels:
       - "traefik.enable=true"
       - traefik.http.routers.guacamole.entrypoints=websecure
-      - traefik.http.routers.guacamole.middlewares=chain-guacamole@file
+      - "traefik.http.routers.guacamole.middlewares=chain-oauth@file,middleware-add-guacamole@file"
     restart: unless-stopped
