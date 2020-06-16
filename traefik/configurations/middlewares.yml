@@ -54,3 +54,12 @@ http:
         trustForwardHeader: true
         authResponseHeaders: 
           - "X-Forwarded-User"
+          
+    middleware-authelia:
+      forwardAuth:
+        address: "http://authelia:9091/api/verify?rd=https://authelia.sierrahausen.com"
+        trustForwardHeader: true
+        authResponseHeaders: 
+          - "Remote-User"
+          - "Remote-Groups"
+#          - "X-Forwarded-User"
