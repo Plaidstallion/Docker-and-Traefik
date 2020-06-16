@@ -19,19 +19,18 @@ http:
         middlewares:
           - middleware-ratelimit
           - middleware-default-headers
-        
-    chain-guacamole:
-      chain:
-        middlewares:
-          - middleware-guacamole-add-guacamole-ext
-          - middleware-ratelimit
-          - middleware-default-headers
-          - middleware-oauth
-      
+
     chain-oauth:
       chain:
         middlewares:
           - middleware-ratelimit
           - middleware-default-headers
           - middleware-oauth
+      
+    chain-authelia:
+      chain:
+        middlewares:
+          - middleware-ratelimit
+          - middleware-default-headers
+          - middleware-authelia
   
