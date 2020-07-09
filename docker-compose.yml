@@ -47,27 +47,27 @@ services:
     labels:
       - "traefik.http.routers.traefik-secure.service=api@internal"
 
-  authelia:
-    container_name: authelia
-    image: authelia/authelia:latest
-    restart: always
-    networks:
-      - proxy
-    expose:
-      - 9091
-    volumes:
-      - $USERDIR/docker/authelia/authelia:/var/lib/authelia
-      - $USERDIR/docker/authelia/configuration.yml:/etc/authelia/configuration.yml:ro
-      - $USERDIR/docker/authelia/users_database.yml:/etc/authelia/users_database.yml
-      - $USERDIR/docker/authelia/notification.txt:/tmp/authelia/notification.txt
-    environment:
-      - TZ=$TZ
-      - UID=$PUID
-      - GID=$PGID
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.authelia.entrypoints=websecure"
-      - "traefik.http.routers.authelia.middlewares=chain-authelia@file"
+#  authelia:
+#    container_name: authelia
+#    image: authelia/authelia:latest
+#    restart: always
+#    networks:
+#      - proxy
+#    expose:
+#      - 9091
+#    volumes:
+#      - $USERDIR/docker/authelia/authelia:/var/lib/authelia
+#      - $USERDIR/docker/authelia/configuration.yml:/etc/authelia/configuration.yml:ro
+#      - $USERDIR/docker/authelia/users_database.yml:/etc/authelia/users_database.yml
+#      - $USERDIR/docker/authelia/notification.txt:/tmp/authelia/notification.txt
+#    environment:
+#      - TZ=$TZ
+#      - UID=$PUID
+#      - GID=$PGID
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.authelia.entrypoints=websecure"
+#      - "traefik.http.routers.authelia.middlewares=chain-authelia@file"
 
   oauth:
     container_name: oauth
@@ -142,7 +142,10 @@ services:
     labels: 
       - traefik.enable=true
       - traefik.http.routers.librespeed.entrypoints=websecure
-      - traefik.http.routers.librespeed.middlewares=chain-authelia@file
+#      - traefik.http.routers.librespeed.rule=(Host(`$DOMAINNAME`) && Path(`/librespeed`))
+#      - traefik.http.routers.librespeed.rule=(Host(`librespeed.$DOMAINNAME`)) || (Host(`$DOMAINNAME`) && Path(`/librespeed`))
+#      - traefik.http.routers.librespeed.middlewares=chain-oauth@file
+      - traefik.http.routers.librespeed.middlewares=chain-oauth@file
     ports:
       - 8085:80
     restart: unless-stopped
@@ -170,13 +173,16 @@ services:
     networks: 
       - mainstack
     environment:
-      - PUID=$PUID
-      - PGID=$PGID
+      - PUID=$PGID
+      - PGID=$PUID
       - TZ=$TZ
+      - DOCKER_MODS=linuxserver/mods:code-server-docker
     volumes:
       - $USERDIR/docker/duplicati:/config
       - $USERDIR:/source
+      - /var/spool/cron/crontabs/<account_name>:/crontabs/<account_name>
       - /etc:/system 
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - 8200:8200
     restart: unless-stopped
@@ -186,14 +192,12 @@ services:
   minecraftbe:
     image: toasterlint/minecraft_bedrock:latest
     container_name: minecraftbe
+    stdin_open: true
+    tty: true
     volumes:
       - "$USERDIR/docker/minecraftbe:/bedrock-server/config"
       - "$USERDIR/docker/minecraftbe/worlds:/bedrock-server/worlds"
       - "$USERDIR/docker/minecraftbe/valid_known_packs.json:/bedrock-server/valid_known_packs.json"
-      - "$USERDIR/docker/minecraftbe/resource_packs/DHBE128LOW:/bedrock-server/resource_packs/DHBE128LOW"
-      - "$USERDIR/docker/minecraftbe/resource_packs/HappyVilla:/bedrock-server/resource_packs/HappyVilla"
-      - "$USERDIR/docker/minecraftbe/behavior_packs/HappyVilla:/bedrock-server/behavior_packs/HappyVilla"
-      - "$USERDIR/docker/minecraftbe/behavior_packs/TameablePa:/bedrock-server/behavior_packs/TameablePa"
     environment:
       - PUID=$PUID
       - PGID=$PGID
@@ -207,7 +211,7 @@ services:
     security_opt:
       - no-new-privileges:true
     networks: 
-      - mainstack
+      - proxy
     environment:
       - PUID=$PGID
       - PGID=$PUID
@@ -216,6 +220,12 @@ services:
       - $USERDIR/docker/thelounge:/config
     ports:
       - 9001:9000
+    expose:
+      - "9000"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.thelounge.entrypoints=websecure
+      - "traefik.http.routers.thelounge.middlewares=chain-oauth@file" #,middleware-whitelist"
     restart: unless-stopped
 
 ######Dashboards######
