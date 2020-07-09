@@ -43,7 +43,9 @@ http:
         - "10.0.0.0/24"
         - "192.168.0.0/16"
         - "172.0.0.0/8"
-        
+        ipStrategy:
+          depth: 2
+          
     middleware-guacamole-add-guacamole-ext:
       addPrefix:
         prefix: "/guacamole"
