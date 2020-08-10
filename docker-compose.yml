@@ -24,7 +24,7 @@ services:
   traefik:
     image: traefik:chevrotin
     container_name: traefik
-    restart: always
+    restart: unless-stopped
     security_opt:
       - no-new-privileges:true
     networks:
@@ -50,7 +50,7 @@ services:
 #  authelia:
 #    container_name: authelia
 #    image: authelia/authelia:latest
-#    restart: always
+#    restart: unless-stopped
 #    networks:
 #      - proxy
 #    expose:
@@ -109,6 +109,8 @@ services:
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     environment:
+      - WATCHTOWER_SCHEDULE=0 0 1 * * *
+      - WATCHTOWER_CLEANUP=true
       - PUID=$PUID
       - PGID=$PGID
       - TZ=$TZ
@@ -150,23 +152,23 @@ services:
       - 8085:80
     restart: unless-stopped
 
-  portainer:
-    image: portainer/portainer:latest
-    container_name: portainer
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      - mainstack
-    ports:
-      - 9000:9000
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - $USERDIR/docker/portainer:/data
-    restart: unless-stopped
+#  portainer:
+#    image: portainer/portainer:latest
+#    container_name: portainer
+#    security_opt:
+#      - no-new-privileges:true
+#    networks:
+#      - mainstack
+#    ports:
+#      - 9000:9000
+#    volumes:
+#      - /etc/localtime:/etc/localtime:ro
+#      - /var/run/docker.sock:/var/run/docker.sock:ro
+#      - $USERDIR/docker/portainer:/data
+#    restart: unless-stopped
 
   duplicati:
-    image: linuxserver/duplicati
+    image: linuxserver/duplicati:latest
     container_name: duplicati
     security_opt:
       - no-new-privileges:true
@@ -180,11 +182,40 @@ services:
     volumes:
       - $USERDIR/docker/duplicati:/config
       - $USERDIR:/source
-      - /var/spool/cron/crontabs/<account_name>:/crontabs/<account_name>
+      - /var/spool/cron/crontabs/<user>:/crontabs/<user>
       - /etc:/system 
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - 8200:8200
+    restart: unless-stopped
+
+  glances:
+    image: vimagick/glances:latest
+    container_name: glances
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - $USERDIR/docker/glances:/etc/glances
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - GLANCES_OPT=-w
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - "$USERDIR/docker/fail2ban:/data"
+      - "$USERDIR/docker/traefik/log:/var/log/traefik:ro"
+      - "$POOL/nextcloud:/var/log/nextcloud:ro"
+    env_file:
+      - "./fail2ban/fail2ban.env"
     restart: unless-stopped
 
 ######Game/App servers#####
@@ -257,8 +288,6 @@ services:
       - no-new-privileges:true
     networks:
       - proxy
-#    expose: 
-#      - 8096
     ports:
       - 8096:8096
     volumes:
@@ -276,7 +305,7 @@ services:
       - "traefik.http.routers.emby.entrypoints=websecure"
       - "traefik.http.routers.emby.middlewares=chain-default@file"
       - "traefik.http.services.emby.loadbalancer.server.port=8096"
-    restart: always
+    restart: unless-stopped
 
   transmission:
     image: linuxserver/transmission:latest
@@ -301,7 +330,7 @@ services:
     restart: unless-stopped
     
   sabnzbd:
-    image: linuxserver/sabnzbd:latest
+    image: linuxserver/sabnzbd:2.3.9-0ubuntu1jcfp218.04-ls67
     container_name: sabnzbd
     security_opt:
       - no-new-privileges:true
@@ -420,6 +449,17 @@ services:
       - TZ=$TZ
     restart: unless-stopped
 
+  youtube-dl:
+    image: kmb32123/youtube-dl-server:latest
+    container_name: youtube-dl
+    networks: 
+      - mainstack
+    ports:
+      - 6060:8080
+    volumes:
+      - /home/mediasrv/docker/youtube-dl:/youtube-dl
+    restart: unless-stopped
+
 ######Nextcloud######
 
   db:
@@ -439,7 +479,7 @@ services:
       - $USERDIR/docker/nextcloud/mariadb:/config
       
   nextcloud:
-    image: linuxserver/nextcloud:latest
+    image: linuxserver/nextcloud:19.0.1-ls92
     container_name: nextcloud
     restart: unless-stopped
     networks:
