@@ -182,7 +182,7 @@ services:
     volumes:
       - $USERDIR/docker/duplicati:/config
       - $USERDIR:/source
-      - /var/spool/cron/crontabs/mediasrv:/crontabs/mediasrv
+      - /var/spool/cron/crontabs/<user>:/crontabs/<user>
       - /etc:/system
       - /opt:/opt-system 
       - /var/run/docker.sock:/var/run/docker.sock
