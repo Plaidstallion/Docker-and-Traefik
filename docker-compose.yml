@@ -1,6 +1,6 @@
 # start up with 'docker-compose up -d' to start in background
 # update images with 'docker-compose pull' but watchtower is doing this.
-# Use 'docker-compose up --detach --build' & 'docker-compose up --detach --build <app>' to not havee to up/down.
+# Use 'docker-compose up --detach --build' & 'docker-compose up --detach --build <app>' to not have to up/down.
 
 version: '3'
 
@@ -182,8 +182,9 @@ services:
     volumes:
       - $USERDIR/docker/duplicati:/config
       - $USERDIR:/source
-      - /var/spool/cron/crontabs/<user>:/crontabs/<user>
-      - /etc:/system 
+      - /var/spool/cron/crontabs/mediasrv:/crontabs/mediasrv
+      - /etc:/system
+      - /opt:/opt-system 
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - 8200:8200
@@ -216,6 +217,35 @@ services:
       - "$POOL/nextcloud:/var/log/nextcloud:ro"
     env_file:
       - "./fail2ban/fail2ban.env"
+    restart: unless-stopped
+
+  healthchecks:
+    image: linuxserver/healthchecks
+    container_name: healthchecks
+    security_opt:
+      - no-new-privileges:true
+    networks: 
+      - mainstack
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - SITE_ROOT=http://192.168.1.9:8798
+      - SITE_NAME=healthchecks
+      - DEFAULT_FROM_EMAIL=$SENDMAIL_ADDR
+      - EMAIL_HOST=smtp.gmail.com
+      - EMAIL_PORT=587
+      - EMAIL_HOST_USER=$SENDMAIL_ADDR
+      - EMAIL_HOST_PASSWORD=$SENDMAIL_PW
+      - EMAIL_USE_TLS=True
+      - ALLOWED_HOSTS=*
+      - SUPERUSER_EMAIL=$CLOUDFLARE_EMAIL
+      - SUPERUSER_PASSWORD=$HEALTHCHK_SU_PW
+      - DEBUG=False
+    volumes:
+      - $USERDIR/docker/healthchecks:/config
+    ports:
+      - 8798:8000
     restart: unless-stopped
 
 ######Game/App servers#####
@@ -288,6 +318,8 @@ services:
       - no-new-privileges:true
     networks:
       - proxy
+#    expose: 
+#      - 8096
     ports:
       - 8096:8096
     volumes:
@@ -457,7 +489,7 @@ services:
     ports:
       - 6060:8080
     volumes:
-      - /home/mediasrv/docker/youtube-dl:/youtube-dl
+      - $USERDIR/docker/youtube-dl:/youtube-dl
     restart: unless-stopped
 
 ######Nextcloud######
