@@ -16,6 +16,8 @@ networks:
     internal: true
   ncdb:
     internal: true
+  ttrss-db:
+    internal: true
 
 services:
 
@@ -182,10 +184,11 @@ services:
     volumes:
       - $USERDIR/docker/duplicati:/config
       - $USERDIR:/source
-      - /var/spool/cron/crontabs/<user>:/crontabs/<user>
+      - /var/spool/cron/crontabs/mediasrv:/crontabs/mediasrv
       - /etc:/system
       - /opt:/opt-system 
       - /var/run/docker.sock:/var/run/docker.sock
+      - /mnt/upi4:/upi4:ro
     ports:
       - 8200:8200
     restart: unless-stopped
@@ -214,7 +217,8 @@ services:
     volumes:
       - "$USERDIR/docker/fail2ban:/data"
       - "$USERDIR/docker/traefik/log:/var/log/traefik:ro"
-      - "$POOL/nextcloud:/var/log/nextcloud:ro"
+      - "$USERDIR/docker/tt-rss/log/nginx:/config/log/nginx/:ro"
+      - "$POOL/nextcloud:/var/log/nextcloud:ro" 
     env_file:
       - "./fail2ban/fail2ban.env"
     restart: unless-stopped
@@ -247,6 +251,60 @@ services:
     ports:
       - 8798:8000
     restart: unless-stopped
+
+  scrutiny:
+    image: analogj/scrutiny
+    container_name: scrutiny
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - mainstack
+    environment:
+      - UID=$PUID
+      - GID=$PGID
+      - TZ=$TZ
+    ports:
+      - '8986:8080'
+    volumes:
+        - '/run/udev:/run/udev:ro'
+        - '/dev/disk:/dev/disk'
+        - $USERDIR/docker/scrutiny/config:/scrutiny/config
+    privileged: true
+
+  apprise:
+    image: caronc/apprise:latest
+    container_name: apprise
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - mainstack
+    environment:
+      - UID=$PUID
+      - GID=$PGID
+      - TZ=$TZ
+    ports:
+      - '8764:8000'
+    volumes:
+      - $USERDIR/docker/apprise:/config
+          
+
+#  mail:
+#    image: bytemark/smtp:latest
+#    restart: always
+#    container_name: mail
+#    security_opt:
+#      - no-new-privileges:true
+#    networks: 
+#      - mainstack
+#    environment:
+#      - RELAY_HOST=smtp.gmail.com
+#      - RELAY_PORT=465
+#      - RELAY_USERNAME=$SENDMAIL_ADDR
+#      - RELAY_PASSWORD=$SENDMAIL_PW
+
+
 
 ######Game/App servers#####
 
@@ -288,6 +346,55 @@ services:
       - traefik.http.routers.thelounge.entrypoints=websecure
       - "traefik.http.routers.thelounge.middlewares=chain-oauth@file" #,middleware-whitelist"
     restart: unless-stopped
+
+  tt-rss:
+    image: lunik1/tt-rss
+    container_name: tt-rss
+    security_opt:
+      - no-new-privileges:true
+    networks: 
+      - proxy
+      - ttrss-db
+    depends_on:
+      - ttrss-db
+    environment:
+      - PUID=$PGID
+      - PGID=$PUID
+      - TZ=$TZ
+      - DB_TYPE=mysql
+      - DB_HOST=ttrss-db
+      - DB_USER=ttrss-db
+      - DB_NAME=ttrss-db
+      - DB_PASS=$NCMYSQL_PASS
+      - DB_PORT=3306
+      - SELF_URL_PATH=https://tt-rss.$DOMAINNAME/
+    volumes:
+      - $USERDIR/docker/tt-rss:/config
+    ports:
+      - 6785:80
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.tt-rss.entrypoints=websecure
+      - traefik.http.routers.tt-rss.middlewares=chain-default@file
+    restart: unless-stopped
+
+  ttrss-db:
+    restart: unless-stopped
+    image: linuxserver/mariadb:latest
+    container_name: ttrss-db
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - ttrss-db
+    environment:
+    - PUID=$PUID
+    - PGID=$PGID
+    - MYSQL_USER=ttrss-db
+    - MYSQL_PASSWORD=$NCMYSQL_PASS
+    - MYSQL_DATABASE=ttrss-db
+    - MYSQL_ROOT_PASSWORD=$NCMYSQL_ROOT_PASS
+    volumes:
+      - $POOL/databases/tt-rss:/config
 
 ######Dashboards######
 
@@ -337,6 +444,39 @@ services:
       - "traefik.http.routers.emby.entrypoints=websecure"
       - "traefik.http.routers.emby.middlewares=chain-default@file"
       - "traefik.http.services.emby.loadbalancer.server.port=8096"
+    restart: unless-stopped
+
+  airsonic:
+    image: linuxserver/airsonic
+    container_name: airsonic
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - GIDLIST=29,998
+      - TZ=$TZ
+#      - CONTEXT_PATH=airsonic.sierrahausen.com #optional
+      - JAVA_OPTS=-Dserver.use-forward-headers=true
+    volumes:
+      - $USERDIR/docker/airsonic:/config
+      - $POOL/music/gregs_music:/gregs_music
+      - $POOL/nextcloud/jana/files/Musik:/janas_musik
+      - $POOL/music/lizs_music:/lizs_music
+      #- /path/to/playlists:/playlists
+      #- /path/to/podcasts:/podcasts
+      #- /path/to/other media:/media #optional
+    ports:
+      - 4040:4040
+    devices:
+      - /dev/snd:/dev/snd #optional
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.airsonic.entrypoints=websecure
+      - traefik.http.routers.airsonic.middlewares=chain-default@file
+      - traefik.http.services.airsonic.loadbalancer.server.port=4040
     restart: unless-stopped
 
   transmission:
@@ -508,7 +648,7 @@ services:
     - MYSQL_DATABASE=nextcloud
     - MYSQL_ROOT_PASSWORD=$NCMYSQL_ROOT_PASS
     volumes:
-      - $USERDIR/docker/nextcloud/mariadb:/config
+      - $POOL/databases/nextcloud:/config
       
   nextcloud:
     image: linuxserver/nextcloud:19.0.1-ls92
@@ -519,6 +659,7 @@ services:
       - ncdb
     depends_on:
       - db
+      - redis
     environment:
       - PUID=$PUID
       - PGID=$PGID
@@ -530,6 +671,20 @@ services:
       - "traefik.enable=true"
       - traefik.http.routers.nextcloud.entrypoints=websecure
       - traefik.http.routers.nextcloud.middlewares=chain-nextcloud@file
+
+  redis:
+    image: bitnami/redis:6.0-debian-10
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    container_name: redis
+    networks:
+      - ncdb
+    ports:
+      - 6379:6379
+#    volumes:
+#      - $USERDIR/docker/nextcloud/redis:/bitnami/redis/data'
 
 ######Guacamole######
   guacdb:
@@ -547,7 +702,7 @@ services:
     - MYSQL_DATABASE=guacamole_db
     - MYSQL_ROOT_PASSWORD=$NCMYSQL_ROOT_PASS
     volumes:
-      - $USERDIR/docker/guacamole/mariadb:/config
+      - $POOL/databases/guacamole:/config
 
   guacd:
     image: linuxserver/guacd:latest
