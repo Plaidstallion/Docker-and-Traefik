@@ -1,0 +1,60 @@
+version: '3'
+
+networks:
+
+  mainstack:
+    external: true
+  proxy:
+      external: true
+
+services:
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    ports:
+      - 80:80
+      - 443:443
+      - 8083:8080
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - $USERDIR/docker/traefik/data/traefik.yml:/traefik.yml:ro
+      - $USERDIR/docker/traefik/configurations:/configurations #:ro
+      - $USERDIR/docker/traefik/data/acme.json:/acme.json
+      - $USERDIR/docker/traefik/log/access.log:/log/access.log
+      - $USERDIR/docker/traefik/log/traefik.log:/log/traefik.log
+    environment:
+      - CF_API_EMAIL=$CLOUDFLARE_EMAIL
+      - CF_API_KEY=$CLOUDFLARE_API_KEY
+    labels:
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      
+  emby:
+    image: emby/embyserver:latest
+    container_name: emby
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    ports:
+      - 8096:8096
+    volumes:
+      - "$USERDIR/docker/emby:/config"
+      - "$POOL:/mnt/share1"
+    environment:
+      - UID=$PUID
+      - GID=$PGID
+      - GIDLIST=109,998
+      - TZ=$TZ
+    devices:
+      - /dev/dri:/dev/dri
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.emby.entrypoints=websecure"
+      - "traefik.http.routers.emby.middlewares=chain-default@file"
+    restart: unless-stopped      
