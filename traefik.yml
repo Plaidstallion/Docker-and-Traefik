@@ -1,0 +1,100 @@
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+    forwardedHeaders:
+      # Allow these IPs to set the X-Forwarded-* headers - Cloudflare IPs: https://www.cloudflare.com/ips/
+      trustedIPs:
+        - "173.245.48.0/20"
+        - "103.21.244.0/22"
+        - "103.22.200.0/22"
+        - "103.31.4.0/22"
+        - "141.101.64.0/18"
+        - "108.162.192.0/18"
+        - "190.93.240.0/20"
+        - "188.114.96.0/20"
+        - "197.234.240.0/22"
+        - "198.41.128.0/17"
+        - "162.158.0.0/15"
+        - "104.16.0.0/12"
+        - "172.64.0.0/13"
+        - "131.0.72.0/22"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: my-domain.com
+            sans:
+              - "*.my-domain.com"
+
+#  bedrock:
+#    address: ":19132/udp"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    swarmMode: false
+    network: proxy
+    defaultRule: "Host(`{{ index .Labels \"com.docker.compose.service\"}}.my-domain.com`)"
+
+  file:
+    directory: /configurations
+    watch: true
+#    debugLogGeneratedTemplate: true
+
+certificatesResolvers:
+  cloudflare:
+    acme:
+      email: <email>
+#      caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
+      storage: acme.json
+      dnsChallenge:
+        provider: cloudflare
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
+#  http:
+#    acme:
+#      email: <email>
+#      storage: acme.json
+#      httpChallenge:
+#        entryPoint: web
+
+log:
+  #filePath: "/log/traefik.log" # (Default: error) DEBUG, INFO, WARN, ERROR, FATAL, PANIC
+  level: ERROR
+
+accessLog:
+  filePath: /log/access.log
+  bufferingSize: 100
+  filters:
+    statusCodes:
+#      - 200
+      - 300-302
+      - 400-499
+      - 500-599
+    retryAttempts: true
+    minDuration: 10ms
+
+serversTransport:
+  insecureSkipVerify: true
+
+#pilot:
+#  token: "<token>"
+
+#experimental:
+#  plugins:
+#    blockpath:
+#      modulename: github.com/traefik/plugin-blockpath
+#      version: v0.2.1
