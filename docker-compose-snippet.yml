@@ -5,7 +5,7 @@ networks:
   mainstack:
     external: true
   proxy:
-      external: true
+    external: true
 
 services:
   traefik:
